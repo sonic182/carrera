@@ -1,5 +1,6 @@
 """Actor class definitions."""
 import threading
+import multiprocessing as mp
 from uuid import uuid4
 
 try:
@@ -24,7 +25,8 @@ class Dispatcher(object):
         self.actors[actor.id] = actor
 
     def remove_actor(self, actor):
-        del self.actors[actor.id]
+        if actor.id in self.actors:
+            del self.actors[actor.id]
 
     def dispatch(self, message, sender_id, receiver_id):
         """Dispatch message."""
@@ -55,6 +57,10 @@ class Actor(object):
         """Remove from dispatcher."""
         self.dispatcher.remove_actor(self)
         self.exit = True
+        self.cleanup()
+
+    def cleanup(self):
+        pass
 
     def send(self, msg, receiver_id=None):
         """Send msg to actor."""
@@ -80,6 +86,49 @@ class ThreadActor(Actor):
                 res = self.on_message(self.msg['message'])
                 self.dispatcher.response(res, **self.msg)
             sleep(0.02)
+
+    def receive(self, message):
+        self.queue.put(message)
+
+    def on_message(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def response_result(self, response, msgid):
+        self.response_q.put((response, msgid))
+
+    def result(self, _id, exit=False):
+        while True:
+            response, msgid = self.response_q.get()
+            if msgid == _id:
+                if exit:
+                    self.exit = True
+                return response
+
+
+class ProcessActor(Actor):
+    """Thread actor."""
+
+    def __init__(self):
+        super(ProcessActor, self).__init__()
+        ctx = mp.get_context('spawn')
+        self.queue = ctx.Queue()
+        self.response_q = ctx.Queue()
+        self.exit = False
+        self.msg = None
+        self.process = mp.Process(target=self.loop, args=(
+            self.queue, self.response_q))
+        self.process.start()
+
+    def loop(self, queue, response_q):
+        while not (self.exit and queue.empty()):
+            if not queue.empty():
+                self.msg = queue.get()
+                res = self.on_message(self.msg['message'])
+                self.dispatcher.response(res, **self.msg)
+            sleep(0.02)
+
+    def cleanup(self):
+        self.process.terminate()
 
     def receive(self, message):
         self.queue.put(message)
