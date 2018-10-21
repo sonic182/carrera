@@ -30,6 +30,7 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-sugar',
+            'pytest-timeout',
             'coverage',
             'coveralls'
         ]
