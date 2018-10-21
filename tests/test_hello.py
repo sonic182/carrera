@@ -30,4 +30,3 @@ def test_hello_p():
     actor = PHelloActor()
     msgid = actor.send('world')
     assert 'Hello world' == actor.result(msgid, exit=True)
-    actor.process.terminate()

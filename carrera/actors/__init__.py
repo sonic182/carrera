@@ -96,9 +96,9 @@ class ThreadActor(Actor):
     def response_result(self, response, msgid):
         self.response_q.put((response, msgid))
 
-    def result(self, _id, exit=False):
+    def result(self, _id, exit=False, timeout=None):
         while True:
-            response, msgid = self.response_q.get()
+            response, msgid = self.response_q.get(timeout=timeout)
             if msgid == _id:
                 if exit:
                     self.exit = True
@@ -113,16 +113,16 @@ class ProcessActor(Actor):
         ctx = mp.get_context('spawn')
         self.queue = ctx.Queue()
         self.response_q = ctx.Queue()
-        self.exit = False
         self.msg = None
-        self.process = mp.Process(target=self.loop, args=(
-            self.queue, self.response_q))
+        self.process = mp.Process(target=self.loop)
         self.process.start()
 
-    def loop(self, queue, response_q):
-        while not (self.exit and queue.empty()):
-            if not queue.empty():
-                self.msg = queue.get()
+    def loop(self):
+        while True:
+            if not self.queue.empty():
+                self.msg = self.queue.get()
+                if self.msg.get('exit'):
+                    break
                 res = self.on_message(self.msg['message'])
                 self.dispatcher.response(res, **self.msg)
             sleep(0.02)
@@ -139,10 +139,10 @@ class ProcessActor(Actor):
     def response_result(self, response, msgid):
         self.response_q.put((response, msgid))
 
-    def result(self, _id, exit=False):
+    def result(self, _id, exit=False, timeout=None):
         while True:
-            response, msgid = self.response_q.get()
+            response, msgid = self.response_q.get(timeout=timeout)
             if msgid == _id:
                 if exit:
-                    self.exit = True
+                    self.queue.put({'exit': True})
                 return response
