@@ -3,10 +3,7 @@ import threading
 import multiprocessing as mp
 from uuid import uuid4
 
-try:
-    from queue import Queue as TQueue
-except ImportError:  # python 2.7 compatibility
-    from Queue import Queue as TQueue
+from queue import Queue as TQueue
 from time import sleep
 
 
@@ -56,10 +53,15 @@ class Actor(object):
     def __del__(self):
         """Remove from dispatcher."""
         self.dispatcher.remove_actor(self)
-        self.exit = True
         self.cleanup()
 
-    def cleanup(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.cleanup()
+
+    def cleanup(self, *args, **kwargs):
         pass
 
     def send(self, msg, receiver_id=None):
@@ -86,6 +88,9 @@ class ThreadActor(Actor):
                 res = self.on_message(self.msg['message'])
                 self.dispatcher.response(res, **self.msg)
             sleep(0.02)
+
+    def cleanup(self, force=False):
+        self.exit = True
 
     def receive(self, message):
         self.queue.put(message)
@@ -127,8 +132,11 @@ class ProcessActor(Actor):
                 self.dispatcher.response(res, **self.msg)
             sleep(0.02)
 
-    def cleanup(self):
-        self.process.terminate()
+    def cleanup(self, force=False):
+        if force:
+            self.process.terminate()
+        else:
+            self.queue.put({'exit': True})
 
     def receive(self, message):
         self.queue.put(message)

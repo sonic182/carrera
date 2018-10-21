@@ -13,9 +13,9 @@ class HelloActor(actors.ThreadActor):
 @pytest.mark.timeout(2)
 def test_hello():
     """Test hello."""
-    actor = HelloActor()
-    msgid = actor.send('world')
-    assert 'Hello world' == actor.result(msgid, exit=True)
+    with HelloActor() as actor:
+        msgid = actor.send('world')
+        assert 'Hello world' == actor.result(msgid)
 
 
 class PHelloActor(actors.ProcessActor):
@@ -27,6 +27,6 @@ class PHelloActor(actors.ProcessActor):
 @pytest.mark.timeout(2)
 def test_hello_p():
     """Test hello process."""
-    actor = PHelloActor()
-    msgid = actor.send('world')
-    assert 'Hello world' == actor.result(msgid, exit=True)
+    with PHelloActor() as actor:
+        msgid = actor.send('world')
+        assert 'Hello world' == actor.result(msgid)
