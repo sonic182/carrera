@@ -61,7 +61,7 @@ def get_logger(verbose=False, debug=False, uuid=uuid4().hex, name=__name__,
                filepath='./logs/'):
     """Setup logging."""
     fmt = logging.Formatter(
-        '{asctime} - {module}:{lineno} - {levelname} - {uuid} - {msg}',
+        '{asctime} - {process}:{thread} -{module}:{lineno} - {levelname} - {uuid} - {msg}',
         style='{')
     level = logging.DEBUG
     logger = logging.getLogger(name)

@@ -1,11 +1,11 @@
 """Dispatcher."""
 import random
-from time import sleep
 from uuid import uuid4
 from queue import Queue
 from carrera.message import Message
-from carrera.communication import TCPServer
-from carrera.communication import TCPClient
+from carrera.communications import TCPServer
+from carrera.communications import TCPClient
+from carrera.communications.remote_actor import RemoteActor
 from carrera.utils import get_logger
 
 
@@ -29,30 +29,38 @@ class Dispatcher(object):
         """Setup dispatcher."""
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
 
-    def add_actor(self, actor, node=None):
+    def add_actor(self, actor):
         actors = self.actors[actor.name] = self.actors.get(actor.name, {})
         actors[actor.id] = {
-            'node': node or self.id,
+            'node': self.id,
             'actor': actor
         }
+
+    def add_node_actors(self, actors, node):
+        for actor_name, ids in actors.items():
+            for _id in ids:
+                actor = RemoteActor(self, actor_name, _id, node)
+                actors = self.actors[actor.name] = self.actors.get(
+                    actor.name, {})
+                actors[actor.id] = {
+                    'node': node,
+                    'actor': actor
+                }
 
     def remove_actor(self, actor):
         if actor.id in self.actors:
             del self.actors[actor.id]
 
-    def dispatch(self, message, target_name, target_id=None, sender_id=None):
+    def dispatch(self, message, target_name, target_id=None, sender_id=None,
+                 msgid=None):
         """Dispatch message."""
         actor = self.select_actor(target_name, target_id)['actor']
-        message = Message(self, message, target=actor, sender=sender_id)
-        msg_data = {
-            'msgid': message.id,
-            'message': message.data,
-            'target_name': target_name,
-            'target_id': target_id,
-            'sender_id': sender_id
-        }
+        message = Message(self, message, target_id=target_id,
+                          target_name=target_name, sender_id=sender_id,
+                          msgid=msgid)
+        msg_data = message.to_dict()
         actor.receive(msg_data)
-        self.logger.debug('dispatched_message', msg_data)
+        self.logger.debug('dispatched_message', extra=msg_data)
         return message
 
     def select_actor(self, sender_name, sender_id):
@@ -63,7 +71,7 @@ class Dispatcher(object):
 
     def send(self, actor, msg, **kwargs):
         """Send task to actor."""
-        self.logger.debug('sending_message', {'msg': msg, **kwargs})
+        self.logger.debug('sending_message', extra={'msg': msg, **kwargs})
         return self.dispatch(msg, actor, **kwargs)
 
     @staticmethod
@@ -73,24 +81,21 @@ class Dispatcher(object):
 
     def result(self, message, timeout=None):
         """Send task to actor."""
+        if not isinstance(message, Message):
+            message = Message.from_dict(self, message)
         return self.select_actor(
-            message.target.name, message.target.id)['actor'].result(
+            message.target_name, message.target_id)['actor'].result(
             message, timeout=timeout)
 
     def response(self, response, msgid, message, target_name, target_id=None,
                  sender_id=None):
         """Dispatch message."""
-        self.logger.debug('got_response', {
+        self.logger.debug('got_response', extra={
             'response': response, 'msgid': msgid, 'message': message,
             'target_name': target_name, 'target_id': target_id})
         self.select_actor(
             target_name, target_id)['actor'].response_result(response, msgid)
         return msgid
-
-    def join(self):
-        """Join to dispatcher loop."""
-        while True:
-            sleep(1)
 
     def setup_server(self, host, port):
         """Setup master tcp server.
@@ -99,13 +104,21 @@ class Dispatcher(object):
         * fetch node info and actors
         """
         self.type = 'master'
+        self.logger.debug('starting_server', extra={
+            'host': host, 'port': port})
         self.server = TCPServer(self, host, port).start()
 
     def connect_to_server(self, host, port):
         """Setup tcp connection.
 
         On new connection:
-        * Wait for commands.
+        * Join client orders
         """
-        self.tcpclient = TCPClient(host, port)
+        self.logger.debug('connecting_to_master', extra={
+            'host': host, 'port': port})
+        self.tcpclient = TCPClient(self, host, port)
         self.client = self.tcpclient.start()
+
+    def client_join(self):
+        """Join client to master."""
+        self.client.join()

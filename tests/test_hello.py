@@ -41,4 +41,3 @@ class TestCase(object):
         with HelloActor() as actor:
             message = actor.dispatcher.send('hello_actor', 'world')
             assert 'Hello world' == actor.dispatcher.result(message, timeout=2)
-            assert False
