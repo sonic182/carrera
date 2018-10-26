@@ -1,5 +1,4 @@
 
-
 import threading
 from time import sleep
 from queue import Queue
@@ -9,8 +8,8 @@ from carrera.actors.base import Actor
 class ThreadActor(Actor):
     """Thread actor."""
 
-    def __init__(self):
-        super(ThreadActor, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(ThreadActor, self).__init__(*args, **kwargs)
         self.queue = Queue()
         self.response_q = Queue()
         self.exit = False
@@ -38,10 +37,12 @@ class ThreadActor(Actor):
     def response_result(self, response, msgid):
         self.response_q.put((response, msgid))
 
-    def result(self, _id, exit=False, timeout=None):
+    def result(self, message, exit=False, timeout=None):
         while True:
             response, msgid = self.response_q.get(timeout=timeout)
-            if msgid == _id:
+            if msgid != message.id:
+                self.response_q.put((response, msgid))
+            else:
                 if exit:
                     self.exit = True
                 return response

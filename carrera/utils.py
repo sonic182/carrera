@@ -57,7 +57,8 @@ class Logger(logging.LoggerAdapter):
         return '{}={}; '.format(key, value)
 
 
-def get_logger(args, config, uuid=uuid4().hex, name=__name__):
+def get_logger(verbose=False, debug=False, uuid=uuid4().hex, name=__name__,
+               filepath='./logs/'):
     """Setup logging."""
     fmt = logging.Formatter(
         '{asctime} - {module}:{lineno} - {levelname} - {uuid} - {msg}',
@@ -66,7 +67,7 @@ def get_logger(args, config, uuid=uuid4().hex, name=__name__):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if args.verbose:
+    if verbose:
         stream = logging.StreamHandler()
         stream.setLevel(level)
         stream.setFormatter(fmt)
@@ -78,7 +79,6 @@ def get_logger(args, config, uuid=uuid4().hex, name=__name__):
         ('error.log', (logging.WARNING, logging.ERROR, logging.CRITICAL)),
     )
 
-    filepath = config['logging'].get('path', './logs/')
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 

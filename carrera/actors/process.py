@@ -7,8 +7,8 @@ from carrera.actors.base import Actor
 class ProcessActor(Actor):
     """Thread actor."""
 
-    def __init__(self):
-        super(ProcessActor, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(ProcessActor, self).__init__(*args, **kwargs)
         ctx = mp.get_context('spawn')
         self.queue = ctx.Queue()
         self.response_q = ctx.Queue()
@@ -41,10 +41,12 @@ class ProcessActor(Actor):
     def response_result(self, response, msgid):
         self.response_q.put((response, msgid))
 
-    def result(self, _id, exit=False, timeout=None):
+    def result(self, message, exit=False, timeout=None):
         while True:
             response, msgid = self.response_q.get(timeout=timeout)
-            if msgid == _id:
+            if msgid != message.id:
+                self.response_q.put((response, msgid))
+            else:
                 if exit:
                     self.queue.put({'exit': True})
                 return response
