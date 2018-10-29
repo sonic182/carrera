@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+carrera = {path = "."}
 
 [dev-packages]
 pytest = "*"
@@ -11,6 +12,7 @@ pytest-cov = "*"
 pytest-sugar = "*"
 coverage = "*"
 coveralls = "*"
+carrera = {editable = true, path = "."}
 
 [requires]
 python_version = "3.7"
