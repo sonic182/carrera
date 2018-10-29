@@ -1,5 +1,4 @@
 """Remote actor representation."""
-import json
 
 
 class RemoteActor(object):
@@ -36,12 +35,10 @@ class RemoteActor(object):
         return self.dispatcher.dispatch(msg, self.name, target_id, sender_id)
 
     def receive(self, message):
-        self.dispatcher.server.workers[self.node].command(
-            'post_job', json.dumps(message).encode())
+        self.dispatcher.server.workers[self.node].post_job(message)
 
     def result(self, message, timeout):
         """Message result."""
-        self.dispatcher.server.workers[self.node].command(
-            'get_job', json.dumps(message.to_dict()).encode())
-        res = self.dispatcher.server.workers[self.node].recv_sized()
-        return json.loads(res.split(b' ', 2)[2].decode())['response']
+        res = self.dispatcher.server.workers[self.node].get_job(
+            message.to_dict())
+        return res['response']

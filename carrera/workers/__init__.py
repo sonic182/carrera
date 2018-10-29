@@ -3,6 +3,8 @@
 import json
 import struct
 
+from threading import Lock
+
 
 COMMANDS = {
     'get_server_info': b'GET WORKER_INFO',
@@ -22,6 +24,7 @@ class Node(object):
         self.server = server
         self.dispatcher = server.dispatcher
         self.logger = self.dispatcher.logger
+        self.lock = Lock()
 
     def command(self, command, data=None):
         """Send command via socket.
@@ -47,13 +50,24 @@ class WorkerNode(Node):
 
     def synchronize(self):
         """Syncronize worker and master."""
-        self.command('get_server_info')
-        worker_info = self.recv_sized()
+        with self.lock:
+            self.command('get_server_info')
+            worker_info = self.recv_sized()
         info = json.loads(worker_info.split(b' ', 2)[2].decode())
         self.logger.debug('worker_info', extra={'info': info})
         self.id = info['id']
         self.server.workers[self.id] = self
         self.dispatcher.add_node_actors(info['actors'], self.id)
+
+    def get_job(self, info):
+        with self.lock:
+            self.command('get_job', json.dumps(info).encode())
+            res = self.recv_sized()
+        return json.loads(res.split(b' ', 2)[2].decode())
+
+    def post_job(self, info):
+        with self.lock:
+            self.command('post_job', json.dumps(info).encode())
 
 
 class MasterNode(Node):
