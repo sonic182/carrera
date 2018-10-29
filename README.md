@@ -7,12 +7,9 @@ Concurrency Framework
 
 # Development
 
-Install packages with pip-tools:
+Install packages with pipenv:
 ```bash
-pip install pip-tools
-pip-compile
-pip-compile dev-requirements.in
-pip-sync requirements.txt dev-requirements.txt
+pipenv install --dev
 ```
 
 # Contribute

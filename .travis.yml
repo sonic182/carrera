@@ -3,7 +3,7 @@ dist: trusty
 python:
   - "3.5"
   - "3.6"
-install: "pip install -e .[test]"
+install: "pip install -e '.[test]'"
 script:
   - coverage run --source=carrera setup.py test
 after_success:

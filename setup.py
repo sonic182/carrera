@@ -23,15 +23,8 @@ setup(
     packages=['carrera'],
     setup_requires=['pytest-runner'],
     test_requires=['pytest'],
-    install_requires=requirements('requirements.txt'),
+    install_requires=requirements('./requirements.txt'),
     extras_require={
-        'dev': requirements('dev-requirements.txt'),
-        'test': [
-            'pytest',
-            'pytest-cov',
-            'pytest-sugar',
-            'coverage',
-            'coveralls'
-        ]
+        'test': requirements('./test-requirements.txt')
     }
 )
