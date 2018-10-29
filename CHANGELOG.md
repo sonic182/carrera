@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Changelog
+- Process Actor
+- Thread Actor
+- Master - Node tcp communication
+- RemoteActor
+- Master - Node send work to worker node from master.
 
 [Unreleased]: https://github.com/sonic182/carrera/compare/0.0.1..HEAD
 
