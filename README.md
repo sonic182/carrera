@@ -5,6 +5,11 @@
 
 Concurrency Framework
 
+# Todo
+
+*  Reconnect master-node
+*  Test reconnect master-node
+
 # Development
 
 Install packages with pipenv:
