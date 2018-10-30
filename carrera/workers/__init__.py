@@ -3,7 +3,9 @@
 import json
 import struct
 
-from threading import Lock
+from threading import Thread
+from queue import Queue
+from datetime import datetime
 
 
 COMMANDS = {
@@ -24,7 +26,16 @@ class Node(object):
         self.server = server
         self.dispatcher = server.dispatcher
         self.logger = self.dispatcher.logger
-        self.lock = Lock()
+        self.reader_t = Thread(target=self.reader)
+        self.messages = Queue()
+        self.exit = False
+
+        self.reader_t.start()
+
+    def cleanup(self):
+        """Cleanup."""
+        self.messages.task_done()
+        self.exit = True
 
     def command(self, command, data=None):
         """Send command via socket.
@@ -37,6 +48,14 @@ class Node(object):
             info += data
         self.connection.send(struct.pack('!h', len(info)) + info)
 
+    def reader(self):
+        """Read data from connection."""
+        while not self.exit:
+            try:
+                self.messages.put(self.recv_sized())
+            except (struct.error, OSError):
+                return
+
     def recv_sized(self):
         """Read sized message in socket."""
         size = struct.unpack('!h', self.connection.recv(2))[0]
@@ -44,30 +63,46 @@ class Node(object):
         self.logger.debug('recv_sized', extra={'data': res})
         return res
 
+    def read(self, category, timeout=None):
+        """Read data from messages queue."""
+        start = datetime.now()
+        self.logger.debug('reading', extra={
+            'category': category, 'timeout': timeout})
+        while True:
+            command = self.messages.get(timeout=timeout)
+            current = datetime.now()
+            method, _category, data = command.split(b' ', 2)
+            if category.lower().encode() == _category.lower():
+                self.logger.debug('read', extra={
+                    'category': category, 'data': data})
+                return command
+            else:
+                self.messages.put(command)
+
+            if timeout and (current - start).total_seconds() > timeout:
+                raise TimeoutError()
+
 
 class WorkerNode(Node):
     """Worker node representation, to be use in master nodes."""
 
     def synchronize(self):
         """Syncronize worker and master."""
-        with self.lock:
-            self.command('get_server_info')
-            worker_info = self.recv_sized()
-        info = json.loads(worker_info.split(b' ', 2)[2].decode())
+        self.command('get_server_info')
+        data = self.read('server_info', 1)
+        info = json.loads(data.split(b' ', 2)[2].decode())
         self.logger.debug('worker_info', extra={'info': info})
         self.id = info['id']
         self.server.workers[self.id] = self
         self.dispatcher.add_node_actors(info['actors'], self.id)
 
-    def get_job(self, info):
-        with self.lock:
-            self.command('get_job', json.dumps(info).encode())
-            res = self.recv_sized()
+    def get_job(self, info, timeout=None):
+        self.command('get_job', json.dumps(info).encode())
+        res = self.read('job_result', timeout)
         return json.loads(res.split(b' ', 2)[2].decode())
 
     def post_job(self, info):
-        with self.lock:
-            self.command('post_job', json.dumps(info).encode())
+        self.command('post_job', json.dumps(info).encode())
 
 
 class MasterNode(Node):
@@ -77,7 +112,7 @@ class MasterNode(Node):
         """Join to orders."""
         while True:
             try:
-                command = self.recv_sized()
+                command = self.messages.get()
                 self.logger.debug('command_received', extra={
                     'command': command})
                 _type, category, data = command.split(b' ', 2)

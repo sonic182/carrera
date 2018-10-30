@@ -40,5 +40,5 @@ class RemoteActor(object):
     def result(self, message, timeout):
         """Message result."""
         res = self.dispatcher.server.workers[self.node].get_job(
-            message.to_dict())
+            message.to_dict(), timeout=timeout)
         return res['response']

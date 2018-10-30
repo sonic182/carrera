@@ -19,6 +19,7 @@ def master(port):
     sleep(1)
     msg = dispatcher.send('hello', 'world')
     assert dispatcher.result(msg) == 'Hello world'
+    dispatcher.logger.debug('exit_text')
     dispatcher.server.close()
 
 
@@ -40,10 +41,7 @@ class TestCase(object):
     def test_master_node(self):
         """Test master-node task."""
         port = randint(1025, 9999)
-        p1 = mp.Process(target=master, args=(port, ))
         p2 = mp.Process(target=node, args=(port, ))
-        p1.start()
         p2.start()
-        p1.join()
-        p1.terminate()
+        master(port)
         p2.terminate()

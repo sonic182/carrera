@@ -15,6 +15,7 @@ class TCPServer(object):
         self.backlog = backlog
         self.dispatcher = dispatcher
         self.logger = dispatcher.logger
+        self.exit = False
 
     def start(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -29,14 +30,21 @@ class TCPServer(object):
         return self
 
     def close(self):
+        self.exit = True
         self.sock.close()
+        self.logger.info('cleaning_up', extra=self.workers)
+        for worker in self.workers:
+            self.workers[worker].cleanup()
+        self.logger.info('cleaned')
 
     def acceptor(self):
-        while True:
+        while not self.exit:
             try:
                 connection, address = self.sock.accept()
             except ConnectionAbortedError:
-                break
+                if self.exit:
+                    return
+                continue
             self.logger.debug('new_connection', extra={'host': address[0],
                                                        'port': address[1]})
             worker = WorkerNode(self, connection, address)
