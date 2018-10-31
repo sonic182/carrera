@@ -13,12 +13,12 @@ class Hello(actors.ThreadActor):
         return 'Hello ' + msg
 
 
-def master(port):
+def master(port, conn):
     dispatcher = Dispatcher()
     dispatcher.setup_server('0.0.0.0', port)
     sleep(1)
     msg = dispatcher.send('hello', 'world')
-    assert dispatcher.result(msg) == 'Hello world'
+    conn.send(dispatcher.result(msg))
     dispatcher.logger.debug('exit_text')
     dispatcher.server.close()
 
@@ -41,7 +41,14 @@ class TestCase(object):
     def test_master_node(self):
         """Test master-node task."""
         port = randint(1025, 9999)
+        parent_conn, child_conn = mp.Pipe()
+        p1 = mp.Process(target=master, args=(port, child_conn))
         p2 = mp.Process(target=node, args=(port, ))
+        p1.start()
         p2.start()
-        master(port)
+        p1.join(2)
+        p2.join(2)
+        assert parent_conn.poll(2)
+        assert parent_conn.recv() == 'Hello world'
+        p1.terminate()
         p2.terminate()
