@@ -14,7 +14,7 @@ class ThreadActor(Actor):
         self.response_q = Queue()
         self.exit = False
         self.msg = None
-        self.thread = threading.Thread(target=self.loop)
+        self.thread = threading.Thread(target=self.loop, name=self.name)
         self.thread.start()
 
     def loop(self):

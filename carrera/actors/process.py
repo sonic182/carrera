@@ -13,7 +13,7 @@ class ProcessActor(Actor):
         self.queue = ctx.Queue()
         self.response_q = ctx.Queue()
         self.msg = None
-        self.process = mp.Process(target=self.loop)
+        self.process = mp.Process(target=self.loop, name=self.name)
         self.process.start()
 
     def loop(self):

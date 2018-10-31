@@ -11,17 +11,24 @@ from carrera.utils import get_logger
 
 class Dispatcher(object):
     instance = None
+    initialized = False
 
     def __new__(cls, *args, **kwargs):
         if not cls.instance:
-            cls.instance = object.__new__(cls)
+            cls.instance = object.__new__(cls, *args, **kwargs)
         return cls.instance
 
     def __init__(self):
+        # singleton initialized flag...
+        if self.initialized:
+            return
+        self.initialized = True
+
         self.actors = {}
         self.id = self.uuid()
         self.type = 'node'
         self.server = None
+        self.tcpclient = None
         self.client = None
         self.send_q = Queue()
 
@@ -48,26 +55,26 @@ class Dispatcher(object):
                 }
 
     def remove_actor(self, actor):
-        if actor.id in self.actors:
-            del self.actors[actor.id]
+        if actor.name in self.actors and actor.id in self.actors[actor.name]:
+            del self.actors[actor.name][actor.id]
 
     def dispatch(self, message, target_name, target_id=None, sender_id=None,
                  msgid=None):
         """Dispatch message."""
         actor = self.select_actor(target_name, target_id)['actor']
-        message = Message(self, message, target_id=target_id,
-                          target_name=target_name, sender_id=sender_id,
+        message = Message(self, message, target_id=actor.id,
+                          target_name=actor.name, sender_id=sender_id,
                           msgid=msgid)
         msg_data = message.to_dict()
         actor.receive(msg_data)
         self.logger.debug('dispatched_message', extra=msg_data)
         return message
 
-    def select_actor(self, sender_name, sender_id):
-        if sender_id:
-            return self.actors[sender_name][sender_id]
-        key = random.choice(list(self.actors[sender_name]))
-        return self.actors[sender_name][key]
+    def select_actor(self, target_name, target_id):
+        if target_id:
+            return self.actors[target_name][target_id]
+        key = random.choice(list(self.actors[target_name]))
+        return self.actors[target_name][key]
 
     def send(self, actor, msg, **kwargs):
         """Send task to actor."""
@@ -92,7 +99,9 @@ class Dispatcher(object):
         """Dispatch message."""
         self.logger.debug('got_response', extra={
             'response': response, 'msgid': msgid, 'message': message,
-            'target_name': target_name, 'target_id': target_id})
+            'target_name': target_name, 'target_id': target_id,
+            'sender_id': sender_id
+        })
         self.select_actor(
             target_name, target_id)['actor'].response_result(response, msgid)
         return msgid
