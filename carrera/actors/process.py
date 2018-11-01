@@ -23,7 +23,7 @@ class ProcessActor(Actor):
                 if self.msg.get('exit'):
                     break
                 res = self.on_message(self.msg['message'])
-                self.dispatcher.response(res, **self.msg)
+                self._dispatcher.response(res, **self.msg)
             sleep(0.02)
 
     def cleanup(self, force=False):

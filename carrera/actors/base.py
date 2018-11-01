@@ -9,14 +9,14 @@ class Actor(object):
     """Actor base class."""
 
     def __init__(self, *args, **kwargs):
-        self.dispatcher = Dispatcher()
-        self.id = self.dispatcher.uuid()
-        self.dispatcher.add_actor(self)
+        self._dispatcher = Dispatcher()
+        self.id = self._dispatcher.uuid()
+        self._dispatcher.add_actor(self)
         self.setup(*args, **kwargs)
 
     def __del__(self):
         """Remove from dispatcher."""
-        self.dispatcher.remove_actor(self)
+        self._dispatcher.remove_actor(self)
         self.cleanup()
 
     @property
@@ -40,7 +40,7 @@ class Actor(object):
 
     def send(self, msg, target_id=None, sender_id=None):
         """Send msg to actor."""
-        return self.dispatcher.dispatch(msg, self.name, target_id, sender_id)
+        return self._dispatcher.dispatch(msg, self.name, target_id, sender_id)
 
     def result(self, *args, **kwargs):
         """Result method."""

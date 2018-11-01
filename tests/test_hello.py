@@ -39,5 +39,5 @@ class TestCase(object):
     def test_hello_dispatch(self):
         """Test hello."""
         with HelloActor() as actor:
-            message = actor.dispatcher.send('hello_actor', 'world')
-            assert 'Hello world' == actor.dispatcher.result(message, timeout=2)
+            message = actor._dispatcher.send('hello_actor', 'world')
+            assert 'Hello world' == actor._dispatcher.result(message, timeout=2)

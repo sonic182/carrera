@@ -8,11 +8,11 @@ class RemoteActor(object):
         self.id = _id
         self.node = node
         self.name = actor_name
-        self.dispatcher = dispatcher
+        self._dispatcher = dispatcher
 
     def __del__(self):
         """Remove from dispatcher."""
-        self.dispatcher.remove_actor(self)
+        self._dispatcher.remove_actor(self)
         self.cleanup()
 
     def __enter__(self):
@@ -32,13 +32,13 @@ class RemoteActor(object):
 
     def send(self, msg, target_id=None, sender_id=None):
         """Send msg to actor."""
-        return self.dispatcher.dispatch(msg, self.name, target_id, sender_id)
+        return self._dispatcher.dispatch(msg, self.name, target_id, sender_id)
 
     def receive(self, message):
-        self.dispatcher.server.workers[self.node].post_job(message)
+        self._dispatcher.server.workers[self.node].post_job(message)
 
     def result(self, message, timeout):
         """Message result."""
-        res = self.dispatcher.server.workers[self.node].get_job(
+        res = self._dispatcher.server.workers[self.node].get_job(
             message.to_dict(), timeout=timeout)
         return res['response']
