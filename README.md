@@ -1,20 +1,21 @@
 
 [![Build Status](https://travis-ci.org/sonic182/carrera.svg?branch=master)](https://travis-ci.org/sonic182/carrera)
 [![Coverage Status](https://coveralls.io/repos/github/sonic182/carrera/badge.svg?branch=master)](https://coveralls.io/github/sonic182/carrera?branch=master)
+
 # Carrera
 
 Concurrency Framework
 
-# Todo
-
-*  Reconnect master-node
-*  Test reconnect master-node
-
 # Development
 
-Install packages with pipenv:
+Install packages with [pipenv](https://github.com/pypa/pipenv):
 ```bash
 pipenv install --dev
+```
+
+Develop... an then run test with pytest
+```bash
+pipenv run pytest
 ```
 
 # Contribute
