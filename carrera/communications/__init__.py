@@ -58,10 +58,15 @@ class TCPClient(object):
         self.host = host
         self.port = port
         self.logger = dispatcher.logger
+        self.sock = None
+        self.workers = {}
+
 
     def start(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (self.host, self.port)
         self.sock.connect(server_address)
         self.dispatcher.logger.debug('connected')
-        return MasterNode(self, self.sock, server_address)
+        worker = MasterNode(self, self.sock, server_address)
+        worker.synchronize()
+        return worker

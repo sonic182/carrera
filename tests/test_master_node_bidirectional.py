@@ -13,22 +13,22 @@ class Hello(actors.ThreadActor):
         return 'Hello ' + msg
 
 
-def master(port, conn):
+def master(port, barrier):
     dispatcher = Dispatcher()
     dispatcher.setup_server('0.0.0.0', port)
-    sleep(1)
+    with Hello() as _actor:
+        barrier.wait()
+        sleep(1)
+        dispatcher.server.close()
+
+
+def node(port, barrier, conn):
+    dispatcher = Dispatcher()
+    barrier.wait()
+    dispatcher.connect_to_server('0.0.0.0', port)
+    sleep(0.5)
     msg = dispatcher.send('hello', 'world')
     conn.send(dispatcher.result(msg))
-    dispatcher.logger.debug('exit_text')
-    dispatcher.server.close()
-
-
-def node(port):
-    dispatcher = Dispatcher()
-    with Hello() as _actor:
-        sleep(0.5)
-        dispatcher.connect_to_server('0.0.0.0', port)
-        dispatcher.join()
 
 
 class TestCase(object):
@@ -38,16 +38,17 @@ class TestCase(object):
         Dispatcher().setup(True, True)
         yield
 
-    def test_master_node(self):
+    def test_master_node_bidirectional(self):
         """Test master-node task."""
         port = randint(1025, 9999)
         parent_conn, child_conn = mp.Pipe()
-        p1 = mp.Process(target=master, args=(port, child_conn))
-        p2 = mp.Process(target=node, args=(port, ))
+        barrier = mp.Barrier(2, timeout=2)
+        p1 = mp.Process(target=master, args=(port, barrier))
+        p2 = mp.Process(target=node, args=(port, barrier, child_conn))
         p1.start()
         p2.start()
-        p1.join(3)
-        p2.join(3)
+        p1.join(2)
+        p2.join(1)
         assert parent_conn.poll(2)
         assert parent_conn.recv() == 'Hello world'
         p1.terminate()

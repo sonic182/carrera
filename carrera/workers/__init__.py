@@ -26,16 +26,19 @@ class Node(object):
         self.server = server
         self.dispatcher = server.dispatcher
         self.logger = self.dispatcher.logger
-        self.reader_t = Thread(target=self.reader)
+        self.worker_t = Thread(target=self.target)
         self.messages = Queue()
         self.exit = False
 
-        self.reader_t.start()
+        self.worker_t.start()
 
     def cleanup(self):
         """Cleanup."""
         self.messages.task_done()
         self.exit = True
+
+    def target(self):
+        raise NotImplementedError()
 
     def command(self, command, data=None):
         """Send command via socket.
@@ -82,10 +85,6 @@ class Node(object):
             if timeout and (current - start).total_seconds() > timeout:
                 raise TimeoutError()
 
-
-class WorkerNode(Node):
-    """Worker node representation, to be use in master nodes."""
-
     def synchronize(self):
         """Syncronize worker and master."""
         self.command('get_server_info')
@@ -96,6 +95,25 @@ class WorkerNode(Node):
         self.server.workers[self.id] = self
         self.dispatcher.add_node_actors(info['actors'], self.id)
 
+    def send_worker_info(self):
+        actors = self.dispatcher.actors
+        info = {
+            'id': self.dispatcher.id,
+            'actors': {
+                name: {
+                    _id: {
+                        'node': actors[name][_id]['node']
+                    } for _id in ids
+                }
+                for name, ids in actors.items()
+            }
+        }
+        self.command('post_server_info', json.dumps(info).encode())
+
+    def send_job_result(self, info, res):
+        info['response'] = res
+        self.command('post_job_result', json.dumps(info).encode())
+
     def get_job(self, info, timeout=None):
         self.command('get_job', json.dumps(info).encode())
         res = self.read('job_result', timeout)
@@ -104,15 +122,11 @@ class WorkerNode(Node):
     def post_job(self, info):
         self.command('post_job', json.dumps(info).encode())
 
-
-class MasterNode(Node):
-    """Master node representation, to be use in worker nodes."""
-
-    def join(self):
-        """Join to orders."""
-        while True:
+    def listener(self):
+        """Listen to tcp requests."""
+        while not self.exit:
             try:
-                command = self.messages.get()
+                command = self.recv_sized()
                 self.logger.debug('command_received', extra={
                     'command': command})
                 _type, category, data = command.split(b' ', 2)
@@ -133,19 +147,31 @@ class MasterNode(Node):
                         if 'msgid' in info:
                             self.dispatcher.send(**info)
 
+                    elif category in (b'JOB_RESULT', b'SERVER_INFO'):
+                        self.messages.put(command)
+
             except KeyboardInterrupt:
                 self.connection.close()
 
-    def send_worker_info(self):
-        info = {
-            'id': self.dispatcher.id,
-            'actors': {
-                name: [_id for _id in ids]
-                for name, ids in self.dispatcher.actors.items()
-            }
-        }
-        self.command('post_server_info', json.dumps(info).encode())
+            except (struct.error, OSError):
+                return
 
-    def send_job_result(self, info, res):
-        info['response'] = res
-        self.command('post_job_result', json.dumps(info).encode())
+    def join(self):
+        """Join to worker thread."""
+        self.worker_t.join()
+
+
+class WorkerNode(Node):
+    """Worker node representation, to be use in master nodes."""
+
+    def target(self):
+        # self.reader()
+        self.listener()
+
+
+
+class MasterNode(Node):
+    """Master node representation, to be use in worker nodes."""
+
+    def target(self):
+        self.listener()
