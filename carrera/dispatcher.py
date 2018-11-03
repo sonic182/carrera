@@ -46,11 +46,12 @@ class Dispatcher(object):
     def add_node_actors(self, actors, node):
         for actor_name, ids in actors.items():
             for _id in ids:
-                actor = RemoteActor(self, actor_name, _id, node)
+                actor = RemoteActor(self, actor_name, _id,
+                                    actors[actor_name][_id]['node'])
                 actors = self.actors[actor.name] = self.actors.get(
                     actor.name, {})
                 actors[actor.id] = {
-                    'node': node,
+                    'node': actor.node,
                     'actor': actor
                 }
 
@@ -107,7 +108,7 @@ class Dispatcher(object):
         return msgid
 
     def setup_server(self, host, port):
-        """Setup master tcp server.
+        """Setup tcp server.
 
         On new connection:
         * fetch node info and actors
@@ -121,13 +122,13 @@ class Dispatcher(object):
         """Setup tcp connection.
 
         On new connection:
-        * Join client orders
+        * fetch node info and actors
         """
         self.logger.debug('connecting_to_master', extra={
             'host': host, 'port': port})
-        self.tcpclient = TCPClient(self, host, port)
-        self.client = self.tcpclient.start()
+        self.server = TCPClient(self, host, port)
+        self.client = self.server.start()
 
-    def client_join(self):
+    def join(self):
         """Join client to master."""
-        self.client.join()
+        getattr(self, 'client', self.server).join()
