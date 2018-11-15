@@ -4,7 +4,6 @@ import multiprocessing as mp
 from random import randint
 from carrera.dispatcher import Dispatcher
 from carrera import actors
-import pytest
 
 
 class Hello(actors.ThreadActor):
@@ -37,24 +36,18 @@ def node(port, conn, barrier):
             conn.recv()  # wait to exit
 
 
-class TestCase(object):
-
-    @pytest.fixture(autouse=True)
-    def transact(self):
-            yield
-
-    def test_master_node(self):
-        """Test master-node task."""
-        port = randint(1025, 9999)
-        parent_conn, child_conn = mp.Pipe()
-        result_conn, result_child_conn = mp.Pipe()
-        barrier = mp.Barrier(2)
-        p1 = mp.Process(
-            target=master, args=(port, child_conn, result_child_conn, barrier))
-        p2 = mp.Process(target=node, args=(port, parent_conn, barrier))
-        p1.start()
-        p2.start()
-        assert result_conn.poll(3)
-        assert result_conn.recv() == 'Hello world'
-        p1.terminate()
-        p2.terminate()
+def test_master_node():
+    """Test master-node task."""
+    port = randint(1025, 9999)
+    parent_conn, child_conn = mp.Pipe()
+    result_conn, result_child_conn = mp.Pipe()
+    barrier = mp.Barrier(2)
+    p1 = mp.Process(
+        target=master, args=(port, child_conn, result_child_conn, barrier))
+    p2 = mp.Process(target=node, args=(port, parent_conn, barrier))
+    p1.start()
+    p2.start()
+    assert result_conn.poll(3)
+    assert result_conn.recv() == 'Hello world'
+    p1.terminate()
+    p2.terminate()

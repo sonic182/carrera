@@ -29,16 +29,16 @@ class TestCase(object):
         """Test hello."""
         with HelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message, timeout=2)
+            assert 'Hello world' == actor.result(message)
 
     def test_hello_p(self):
         """Test hello process."""
         with PHelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message, timeout=2)
+            assert 'Hello world' == actor.result(message)
 
     def test_hello_dispatch(self):
         """Test hello."""
         with HelloActor() as actor:
             message = actor._dispatcher.send('hello_actor', 'world')
-            assert 'Hello world' == actor._dispatcher.result(message, timeout=2)
+            assert 'Hello world' == actor._dispatcher.result(message)

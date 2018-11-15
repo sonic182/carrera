@@ -29,9 +29,9 @@ class TestCase(object):
 
     @pytest.fixture(autouse=True)
     def transact(self):
-        Dispatcher().setup(True, True)
-        yield
-        Dispatcher().cleanup()
+        with Dispatcher() as dispatcher:
+            dispatcher.setup(True, True)
+            yield
 
     def test_hello_creating_actor(self):
         """Test hello actor creates another actor (thread) to resolve."""
