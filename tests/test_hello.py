@@ -21,24 +21,24 @@ class TestCase(object):
 
     @pytest.fixture(autouse=True)
     def transact(self):
-        Dispatcher().setup(True, True)
-        yield
-        Dispatcher().cleanup()
+        with Dispatcher() as dispatcher:
+            dispatcher.setup(True, True)
+            yield
 
     def test_hello(self):
         """Test hello."""
         with HelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message)
+            assert 'Hello world' == actor.result(message, timeout=2)
 
     def test_hello_p(self):
         """Test hello process."""
         with PHelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message)
+            assert 'Hello world' == actor.result(message, timeout=2)
 
     def test_hello_dispatch(self):
         """Test hello."""
         with HelloActor() as actor:
             message = actor._dispatcher.send('hello_actor', 'world')
-            assert 'Hello world' == actor._dispatcher.result(message)
+            assert 'Hello world' == actor._dispatcher.result(message, timeout=2)

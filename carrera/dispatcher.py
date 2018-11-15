@@ -32,6 +32,12 @@ class Dispatcher(object):
         self.client = None
         self.send_q = Queue()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.cleanup()
+
     def cleanup(self):
         self.instance = None
         self.initialized = False
