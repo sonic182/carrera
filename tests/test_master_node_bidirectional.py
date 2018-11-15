@@ -16,7 +16,7 @@ class Hello(actors.ThreadActor):
 def master(port, barrier):
     dispatcher = Dispatcher()
     dispatcher.setup_server('0.0.0.0', port)
-    with Hello() as _actor:
+    with Hello() as _actor:  # noqa
         barrier.wait()
         sleep(1)
         dispatcher.server.close()
@@ -37,6 +37,7 @@ class TestCase(object):
     def transact(self):
         Dispatcher().setup(True, True)
         yield
+        Dispatcher().cleanup()
 
     def test_master_node_bidirectional(self):
         """Test master-node task."""

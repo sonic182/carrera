@@ -37,6 +37,7 @@ class TestCase(object):
     def transact(self):
         Dispatcher().setup(True, True)
         yield
+        Dispatcher().cleanup()
 
     def test_master_node(self):
         """Test master-node task."""

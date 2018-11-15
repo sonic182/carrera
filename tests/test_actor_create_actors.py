@@ -22,7 +22,7 @@ class P2HelloActor(actors.ProcessActor):
     def on_message(self, msg):
         with HelloActor() as actor:
             key = actor.send(msg, sender_id=actor.id)
-            return actor.result(key, timeout=3)
+            return actor.result(key)
 
 
 class TestCase(object):
@@ -31,15 +31,16 @@ class TestCase(object):
     def transact(self):
         Dispatcher().setup(True, True)
         yield
+        Dispatcher().cleanup()
 
     def test_hello_creating_actor(self):
         """Test hello actor creates another actor (thread) to resolve."""
         with PHelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message, timeout=3)
+            assert 'Hello world' == actor.result(message)
 
     def test_hello_p_creating_actor(self):
         """Test hello actor creates another actor (process) to resolve."""
         with PHelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message, timeout=3)
+            assert 'Hello world' == actor.result(message)

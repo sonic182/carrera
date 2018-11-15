@@ -32,9 +32,14 @@ class Dispatcher(object):
         self.client = None
         self.send_q = Queue()
 
+    def cleanup(self):
+        self.instance = None
+        self.initialized = False
+
     def setup(self, verbose=True, debug=False):
         """Setup dispatcher."""
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
+        self.logger.info('dispatcher_info', extra={'id': id(self)})
 
     def add_actor(self, actor):
         actors = self.actors[actor.name] = self.actors.get(actor.name, {})
