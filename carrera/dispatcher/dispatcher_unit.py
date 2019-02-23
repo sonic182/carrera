@@ -1,6 +1,8 @@
 
 import random
 from queue import Queue
+from datetime import datetime
+from datetime import timedelta
 from time import sleep
 from threading import Thread
 from carrera.message import Message
@@ -37,6 +39,9 @@ class DispatcherUnit(object):
             if not queue.empty():
                 msg = queue.get()
                 try:
+                    if not self.actor_present(msg):
+                        queue.put(msg)
+                        continue
                     self.dispatch_to_actor(msg)
                 except Exception:
                     self.logger.exception('dispatch_exception')
@@ -49,6 +54,7 @@ class DispatcherUnit(object):
     def result(self, message: Message, timeout=None):
         """Set message into dispatch queue."""
         # self.dispatch_q.put(message)
+        self.wait_actor(message, timeout)
         self.logger.debug(
             'getting_result_response', extra={
                 'target': message.target_name, 'id': message.target_id})
@@ -64,6 +70,18 @@ class DispatcherUnit(object):
         self.select_actor(
             target_name, target_id)['actor'].response_result(
             response, msgid)
+
+    def actor_present(self, message: Message):
+        """Check if actor's present."""
+        return message.target_name in self.actors
+
+    def wait_actor(self, message: Message, timeout):
+        """Check if actor's present."""
+        until = datetime.now() + timedelta(seconds=timeout or 60)
+        while message.target_name not in self.actors:
+            if datetime.now() > until:
+                raise TimeoutError('Actor never got available')
+        return message.target_name in self.actors
 
     def dispatch_to_actor(self, message: Message):
         """Dispatch message to actor."""
