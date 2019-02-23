@@ -3,7 +3,11 @@ dist: trusty
 python:
   - "3.5"
   - "3.6"
-  - "3.7"
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
 install: "pip install -e .[test]"
 script:
   - coverage run --source=carrera setup.py test
