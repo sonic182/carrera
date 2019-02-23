@@ -19,6 +19,7 @@ class DispatcherUnit(object):
             target=self.dispatcher_unit,
             name=self.dispatcher.id)
         self.dispatcher_t.start()
+        self.cache = {}
 
     @property
     def actors(self):
@@ -104,7 +105,10 @@ class DispatcherUnit(object):
         if select_method == 'random':
             key = random.choice(list(self.actors[target_name]))
         elif select_method == 'round_robin':
-            key = self.round_robin(target_name)
+            cache_key = target_name + '_generator'
+            self.cache[cache_key] = self.cache.get(
+                cache_key) or self.round_robin(target_name)
+            key = next(self.cache[cache_key])
         else:
             raise NotImplementedError('selection not implemented')
         return self.actors[target_name][key]
