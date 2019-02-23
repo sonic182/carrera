@@ -37,10 +37,11 @@ class DispatcherUnit(object):
         queue = self.dispatch_q
         while not (self.exit and queue.empty()):
             if not queue.empty():
-                msg = queue.get()
+                msg: Message = queue.get()
                 try:
                     if not self.actor_present(msg):
-                        queue.put(msg)
+                        if not msg.expired():
+                            queue.put(msg)
                         continue
                     self.dispatch_to_actor(msg)
                 except Exception:
@@ -53,7 +54,6 @@ class DispatcherUnit(object):
 
     def result(self, message: Message, timeout=None):
         """Set message into dispatch queue."""
-        # self.dispatch_q.put(message)
         self.wait_actor(message, timeout)
         self.logger.debug(
             'getting_result_response', extra={
@@ -62,11 +62,11 @@ class DispatcherUnit(object):
             message.target_name, message.target_id)['actor'].result(
                 message, timeout=timeout)
 
-    def response(self, response, msgid, message, target_name, target_id=None,
-                 sender_id=None):
+    def response(self, response, msgid, target_name, target_id=None, **kwargs):
         """Tell actor it's response."""
         self.logger.debug('setting_response', extra={'target': target_name,
-                                                     'id': target_id})
+                                                     'id': target_id,
+                                                     'kwargs': kwargs})
         self.select_actor(
             target_name, target_id)['actor'].response_result(
             response, msgid)

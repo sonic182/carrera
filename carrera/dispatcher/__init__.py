@@ -1,5 +1,6 @@
 """Dispatcher."""
 from uuid import uuid4
+from configparser import ConfigParser
 from carrera.dispatcher.dispatcher_unit import DispatcherUnit
 from carrera.message import Message
 from carrera.communications import TCPServer
@@ -23,6 +24,7 @@ class Dispatcher(object):
             return
         self.initialized = True
         self.logger = None
+        self.config = None
 
         self.actors = {}
         self.id = _id or self.uuid()
@@ -42,10 +44,14 @@ class Dispatcher(object):
         self.initialized = False
         self.unit.cleanup()
 
-    def setup(self, verbose=True, debug=False):
+    def setup(self, verbose=True, debug=False,
+              config: ConfigParser = ConfigParser()):
         """Setup dispatcher."""
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
         self.logger.info('dispatcher_info', extra={'id': self.id})
+        if not 'messages' in config:
+            config.add_section('messages')
+        self.config = config
 
     def add_actor(self, actor):
         actors = self.actors[actor.name] = self.actors.get(actor.name, {})
@@ -104,8 +110,8 @@ class Dispatcher(object):
             'target_name': target_name, 'target_id': target_id,
             'sender_id': sender_id
         })
-        self.unit.response(
-            response, msgid, message, target_name, target_id, sender_id)
+        self.unit.response(response, msgid, target_name, target_id,
+                           message=message, sender_id=sender_id)
         return msgid
 
     def setup_server(self, host, port):
