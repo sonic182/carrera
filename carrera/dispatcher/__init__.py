@@ -47,10 +47,10 @@ class Dispatcher(object):
     def setup(self, verbose=True, debug=False,
               config: ConfigParser = ConfigParser()):
         """Setup dispatcher."""
+        if 'messages' not in config:
+            config.add_section('messages')
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
         self.logger.info('dispatcher_info', extra={'id': self.id})
-        if not 'messages' in config:
-            config.add_section('messages')
         self.config = config
 
     def add_actor(self, actor):

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Master - Node tcp communication
 - RemoteActor
 - Master - Node send work to worker node from master.
+- Queue of messages when sending work to actors
 
 [Unreleased]: https://github.com/sonic182/carrera/compare/0.0.1..HEAD
 

@@ -18,6 +18,9 @@ class Message(object):
     def config(self):
         return self._dispatcher.config['messages']
 
+    def __str__(self):
+        return str(self.to_dict())
+
     def to_dict(self):
         return {
             'msgid': self.id,

@@ -37,7 +37,7 @@ class DispatcherUnit(object):
         queue = self.dispatch_q
         while not (self.exit and queue.empty()):
             if not queue.empty():
-                msg: Message = queue.get()
+                msg = queue.get()
                 try:
                     if not self.actor_present(msg):
                         if not msg.expired():
@@ -76,9 +76,9 @@ class DispatcherUnit(object):
         return message.target_name in self.actors
 
     def wait_actor(self, message: Message, timeout):
-        """Check if actor's present."""
+        """Check if actor's present and assigned to message."""
         until = datetime.now() + timedelta(seconds=timeout or 60)
-        while message.target_name not in self.actors:
+        while message.target_name not in self.actors or not message.target_id:
             if datetime.now() > until:
                 raise TimeoutError('Actor never got available')
         return message.target_name in self.actors
