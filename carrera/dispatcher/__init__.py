@@ -49,6 +49,8 @@ class Dispatcher(object):
         """Setup dispatcher."""
         if 'messages' not in config:
             config.add_section('messages')
+        if 'dispatcher' not in config:
+            config.add_section('dispatcher')
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
         self.logger.info('dispatcher_info', extra={'id': self.id})
         self.config = config

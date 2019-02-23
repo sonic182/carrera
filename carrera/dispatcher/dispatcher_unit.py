@@ -28,6 +28,10 @@ class DispatcherUnit(object):
     def logger(self):
         return self.dispatcher.logger
 
+    @property
+    def config(self):
+        return self.dispatcher.config['dispatcher']
+
     def cleanup(self):
         """Do cleanup."""
         self.exit = True
@@ -95,5 +99,18 @@ class DispatcherUnit(object):
     def select_actor(self, target_name, target_id):
         if target_id:
             return self.actors[target_name][target_id]
-        key = random.choice(list(self.actors[target_name]))
+        select_method = self.config.get('selection', 'random')
+
+        if select_method == 'random':
+            key = random.choice(list(self.actors[target_name]))
+        elif select_method == 'round_robin':
+            key = self.round_robin(target_name)
+        else:
+            raise NotImplementedError('selection not implemented')
         return self.actors[target_name][key]
+
+    def round_robin(self, target_name):
+        """Round robin selection."""
+        while True:
+            for key in self.actors[target_name]:
+                yield key

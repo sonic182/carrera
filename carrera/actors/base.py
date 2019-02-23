@@ -12,7 +12,6 @@ class Actor(object):
         self._dispatcher = Dispatcher()
         self.id = self._dispatcher.uuid()
         self._dispatcher.add_actor(self)
-        self.setup(*args, **kwargs)
 
     def __del__(self):
         """Remove from dispatcher."""

@@ -17,6 +17,8 @@ class ProcessActor(Actor):
         self.process.start()
 
     def loop(self):
+        self.setup()
+
         while True:
             if not self.queue.empty():
                 self.msg = self.queue.get()
