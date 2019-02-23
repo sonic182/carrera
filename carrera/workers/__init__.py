@@ -3,6 +3,7 @@
 import json
 import struct
 
+from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
 from queue import Queue
 from datetime import datetime
@@ -26,11 +27,12 @@ class Node(object):
         self.server = server
         self.dispatcher = server.dispatcher
         self.logger = self.dispatcher.logger
-        self.worker_t = Thread(target=self.target)
         self.messages = Queue()
         self.exit = False
+        self.executor = ThreadPoolExecutor()
+        # self.worker_t = Thread(target=self.target)
+        self.worker_t = self.executor.submit(self.target)
 
-        self.worker_t.start()
 
     def cleanup(self):
         """Cleanup."""
@@ -131,24 +133,12 @@ class Node(object):
                     'command': command})
                 _type, category, data = command.split(b' ', 2)
                 if _type == b'GET':
-                    if category == b'WORKER_INFO':
-                        self.send_worker_info()
-
-                    elif category == b'JOB':
-                        info = json.loads(data.decode())
-                        res = self.dispatcher.result(info)
-                        self.send_job_result(info, res)
+                    self.executor.submit(
+                        self.get_command, category, data, command)
 
                 elif _type == b'POST':
-                    if category == b'JOB':
-                        info = json.loads(data.decode())
-                        info['msg'] = info.pop('message')
-                        info['actor'] = info.pop('target_name')
-                        if 'msgid' in info:
-                            self.dispatcher.send(**info)
-
-                    elif category in (b'JOB_RESULT', b'SERVER_INFO'):
-                        self.messages.put(command)
+                    self.executor.submit(
+                        self.post_command, category, data, command)
 
             except KeyboardInterrupt:
                 self.connection.close()
@@ -156,9 +146,31 @@ class Node(object):
             except (struct.error, OSError):
                 return
 
+    def get_command(self, category, data, command):
+        """Get command."""
+        if category == b'WORKER_INFO':
+            self.send_worker_info()
+
+        elif category == b'JOB':
+            info = json.loads(data.decode())
+            res = self.dispatcher.result(info)
+            self.send_job_result(info, res)
+
+    def post_command(self, category, data, command):
+        """Post command."""
+        if category == b'JOB':
+            info = json.loads(data.decode())
+            info['msg'] = info.pop('message')
+            info['actor'] = info.pop('target_name')
+            if 'msgid' in info:
+                self.dispatcher.send(**info)
+
+        elif category in (b'JOB_RESULT', b'SERVER_INFO'):
+            self.messages.put(command)
+
     def join(self):
         """Join to worker thread."""
-        self.worker_t.join()
+        self.worker_t.result()
 
 
 class WorkerNode(Node):

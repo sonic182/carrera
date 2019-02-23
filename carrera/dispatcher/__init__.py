@@ -1,7 +1,6 @@
 """Dispatcher."""
-import random
 from uuid import uuid4
-from queue import Queue
+from carrera.dispatcher.dispatcher_unit import DispatcherUnit
 from carrera.message import Message
 from carrera.communications import TCPServer
 from carrera.communications import TCPClient
@@ -18,19 +17,19 @@ class Dispatcher(object):
             cls.instance = object.__new__(cls)
         return cls.instance
 
-    def __init__(self):
+    def __init__(self, _id=None):
         # singleton initialized flag...
         if self.initialized:
             return
         self.initialized = True
+        self.logger = None
 
         self.actors = {}
-        self.id = self.uuid()
+        self.id = _id or self.uuid()
         self.type = 'node'
         self.server = None
-        self.tcpclient = None
         self.client = None
-        self.send_q = Queue()
+        self.unit = DispatcherUnit(self)
 
     def __enter__(self):
         return self
@@ -41,11 +40,12 @@ class Dispatcher(object):
     def cleanup(self):
         self.instance = None
         self.initialized = False
+        self.unit.cleanup()
 
     def setup(self, verbose=True, debug=False):
         """Setup dispatcher."""
         self.logger, _ = get_logger(verbose=verbose, debug=debug)
-        self.logger.info('dispatcher_info', extra={'id': id(self)})
+        self.logger.info('dispatcher_info', extra={'id': self.id})
 
     def add_actor(self, actor):
         actors = self.actors[actor.name] = self.actors.get(actor.name, {})
@@ -70,23 +70,14 @@ class Dispatcher(object):
         if actor.name in self.actors and actor.id in self.actors[actor.name]:
             del self.actors[actor.name][actor.id]
 
-    def dispatch(self, message, target_name, target_id=None, sender_id=None,
-                 msgid=None):
+    def dispatch(self, message_data, target_name, target_id=None,
+                 sender_id=None, msgid=None):
         """Dispatch message."""
-        actor = self.select_actor(target_name, target_id)['actor']
-        message = Message(self, message, target_id=actor.id,
-                          target_name=actor.name, sender_id=sender_id,
-                          msgid=msgid)
-        msg_data = message.to_dict()
-        actor.receive(msg_data)
-        self.logger.debug('dispatched_message', extra=msg_data)
+        message = Message(self, message_data, target_id, target_name,
+                          sender_id, msgid=msgid)
+        self.unit.dispatch(message)
+        self.logger.debug('dispatched_message', extra=message.to_dict())
         return message
-
-    def select_actor(self, target_name, target_id):
-        if target_id:
-            return self.actors[target_name][target_id]
-        key = random.choice(list(self.actors[target_name]))
-        return self.actors[target_name][key]
 
     def send(self, actor, msg, **kwargs):
         """Send task to actor."""
@@ -99,23 +90,22 @@ class Dispatcher(object):
         return uuid4().hex
 
     def result(self, message, timeout=None):
-        """Send task to actor."""
+        """Get actor's message result."""
         if not isinstance(message, Message):
             message = Message.from_dict(self, message)
-        return self.select_actor(
-            message.target_name, message.target_id)['actor'].result(
-            message, timeout=timeout)
+        self.logger.debug('result_message', extra=message.to_dict())
+        return self.unit.result(message, timeout)
 
     def response(self, response, msgid, message, target_name, target_id=None,
                  sender_id=None):
-        """Dispatch message."""
+        """Dispatch actor's response to actor's requester."""
         self.logger.debug('got_response', extra={
             'response': response, 'msgid': msgid, 'message': message,
             'target_name': target_name, 'target_id': target_id,
             'sender_id': sender_id
         })
-        self.select_actor(
-            target_name, target_id)['actor'].response_result(response, msgid)
+        self.unit.response(
+            response, msgid, message, target_name, target_id, sender_id)
         return msgid
 
     def setup_server(self, host, port):

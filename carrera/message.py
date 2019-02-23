@@ -10,10 +10,6 @@ class Message(object):
         self.target_name = target_name
         self.sender_id = sender_id
 
-    def __str__(self):
-        args = (self.id, str(self.target), str(self.sender))
-        return '-'.join(args)
-
     def to_dict(self):
         return {
             'msgid': self.id,
@@ -22,6 +18,11 @@ class Message(object):
             'target_id': self.target_id,
             'sender_id': self.sender_id
         }
+
+    def set_target(self, actor):
+        """Set target data."""
+        self.target_id = actor.id
+        self.target_name = actor.name
 
     @staticmethod
     def from_dict(dispatcher, message):
