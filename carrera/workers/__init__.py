@@ -4,7 +4,6 @@ import json
 import struct
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import Thread
 from queue import Queue
 from datetime import datetime
 
@@ -32,7 +31,6 @@ class Node(object):
         self.executor = ThreadPoolExecutor()
         # self.worker_t = Thread(target=self.target)
         self.worker_t = self.executor.submit(self.target)
-
 
     def cleanup(self):
         """Cleanup."""
