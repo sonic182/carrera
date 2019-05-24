@@ -1,7 +1,0 @@
-pylint
-pytest
-pytest-sugar
-pytest-cov
-autopep8
-flake8
-flake8-docstrings
