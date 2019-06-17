@@ -4,4 +4,5 @@ pytest-sugar
 pytest-cov
 autopep8
 flake8
+coveralls
 pytest-flake8
