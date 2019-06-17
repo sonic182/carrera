@@ -8,14 +8,14 @@ Concurrency Framework
 
 # Development
 
-Install packages with [pipenv](https://github.com/pypa/pipenv):
+Install package
 ```bash
-pipenv install --dev
+pip install -e ".[test]"
 ```
 
 Develop... an then run test with pytest
 ```bash
-pipenv run pytest
+pytest
 ```
 
 # Contribute

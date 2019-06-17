@@ -46,6 +46,10 @@ class DispatcherUnit(object):
                 try:
                     if not self.actor_present(msg):
                         if not msg.expired():
+                            # This could lock actors dict being editable
+                            # so we need a little sleep here
+                            if queue.empty():
+                                sleep(0.02)
                             queue.put(msg)
                         continue
                     self.dispatch_to_actor(msg)

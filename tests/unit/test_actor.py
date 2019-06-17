@@ -5,7 +5,6 @@ from carrera.dispatcher import Dispatcher
 from carrera.actors.base import Actor
 from carrera.actors import ThreadActor
 from carrera.actors import ProcessActor
-from carrera.message import Message
 
 
 class HelloActor(ThreadActor):
@@ -48,4 +47,3 @@ class TestCase(object):
         with pytest.raises(NotImplementedError):
             with ProcessActor() as actor:
                 actor.on_message('hello')
-

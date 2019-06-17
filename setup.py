@@ -1,16 +1,21 @@
 """Setup module."""
 
+
+import re
 from setuptools import setup
-try:
-    from pip._internal.req import parse_requirements
-except ImportError:
-    from pip.req import parse_requirements
+
+RGX = re.compile('([\w-]+==[\d.]+)')
+
+
+def read_file(filename):
+    """Read file correctly."""
+    with open(filename) as _file:
+        return _file.read().strip()
 
 
 def requirements(filename):
-    """Parse requirements from requirements.txt."""
-    reqs = parse_requirements(filename, session=False)
-    return [str(req.req) for req in reqs]
+    """Parse requirements from file."""
+    return re.findall(RGX, read_file(filename)) or []
 
 
 setup(

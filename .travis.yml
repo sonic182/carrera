@@ -10,4 +10,4 @@ matrix:
       sudo: true
 install: "pip install -e .[test]"
 script:
-  - coverage run --source=carrera setup.py test
+  - pytest --cov=carrera
