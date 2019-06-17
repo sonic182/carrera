@@ -1,6 +1,7 @@
 
 
 [![Build Status](https://travis-ci.org/sonic182/carrera.svg?branch=master)](https://travis-ci.org/sonic182/carrera)
+[![Coverage Status](https://coveralls.io/repos/github/carrera/badge.svg?branch=master)](https://coveralls.io/github/carrera?branch=master)
 
 # Carrera
 
