@@ -5,7 +5,7 @@ from carrera.actors.base import Actor
 
 
 class ProcessActor(Actor):
-    """Thread actor."""
+    """Process actor."""
 
     def __init__(self, *args, **kwargs):
         super(ProcessActor, self).__init__(*args, **kwargs)
@@ -17,6 +17,7 @@ class ProcessActor(Actor):
         self.process.start()
 
     def loop(self):
+        """Read messages from process queue."""
         self.setup()
 
         while True:
@@ -29,6 +30,7 @@ class ProcessActor(Actor):
             sleep(0.02)
 
     def cleanup(self, force=False):
+        """Cleanup actor."""
         if force:
             self.process.terminate()
         else:
@@ -44,6 +46,14 @@ class ProcessActor(Actor):
         self.response_q.put((response, msgid))
 
     def result(self, message, exit=False, timeout=None):
+        """Get result of executed task.
+
+        Params:
+          * msg (carrera.messages.Message): sender Message instance.
+          * exit(bool): if provided, this actor exists when failed result
+            retrival.
+          * timeout(str): if provided specify message sender to target agent
+        """
         while True:
             response, msgid = self.response_q.get(timeout=timeout)
             if msgid != message.id:
