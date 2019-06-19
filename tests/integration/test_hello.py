@@ -6,39 +6,44 @@ from carrera.dispatcher import Dispatcher
 
 
 class HelloActor(actors.ThreadActor):
+    """Sample Hello actor."""
 
     def on_message(self, msg):
         return 'Hello ' + msg
 
 
 class PHelloActor(actors.ProcessActor):
+    """Sample Process Hello actor."""
 
     def on_message(self, msg):
         return 'Hello ' + msg
 
 
-class TestCase(object):
+class TestCase():
 
     @pytest.fixture(autouse=True)
-    def transact(self):
+    def setUp(self):
         with Dispatcher() as dispatcher:
             dispatcher.setup(True, True)
             yield
 
-    def test_hello(self):
+    @staticmethod
+    def test_hello():
         """Test hello."""
         with HelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message)
+            assert actor.result(message) == 'Hello world'
 
-    def test_hello_p(self):
+    @staticmethod
+    def test_hello_p():
         """Test hello process."""
         with PHelloActor() as actor:
             message = actor.send('world')
-            assert 'Hello world' == actor.result(message)
+            assert actor.result(message) == 'Hello world'
 
-    def test_hello_dispatch(self):
+    @staticmethod
+    def test_hello_dispatch():
         """Test hello."""
         with HelloActor() as actor:
             message = actor._dispatcher.send('hello_actor', 'world')
-            assert 'Hello world' == actor._dispatcher.result(message)
+            assert actor._dispatcher.result(message) == 'Hello world'

@@ -1,3 +1,4 @@
+"""Test Master Node flow."""
 
 from time import sleep
 import multiprocessing as mp
@@ -42,12 +43,12 @@ def test_master_node():
     parent_conn, child_conn = mp.Pipe()
     result_conn, result_child_conn = mp.Pipe()
     barrier = mp.Barrier(2)
-    p1 = mp.Process(
+    process_master = mp.Process(
         target=master, args=(port, child_conn, result_child_conn, barrier))
-    p2 = mp.Process(target=node, args=(port, parent_conn, barrier))
-    p1.start()
-    p2.start()
+    process_node = mp.Process(target=node, args=(port, parent_conn, barrier))
+    process_master.start()
+    process_node.start()
     assert result_conn.poll(3)
     assert result_conn.recv() == 'Hello world'
-    p1.terminate()
-    p2.terminate()
+    process_master.terminate()
+    process_node.terminate()
