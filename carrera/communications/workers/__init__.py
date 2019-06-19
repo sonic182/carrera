@@ -1,4 +1,9 @@
-"""Worker class."""
+"""Worker module.
+
+Representations of nodes of cluster.
+
+This classes communicates with dispatcher to send/receive commands.
+"""
 
 import json
 import struct
@@ -17,9 +22,14 @@ COMMANDS = {
 }
 
 
-class Node(object):
+class NodeBase:
+    """Base node class.
+
+    This class has common methods for nodes communications.
+    """
 
     def __init__(self, server, connection, address):
+        """Initalize Node."""
         self.id = None
         self.connection = connection
         self.address = address
@@ -38,9 +48,10 @@ class Node(object):
         self.exit = True
 
     def target(self):
+        """Target method Node instance should have for handling commands."""
         raise NotImplementedError()
 
-    def command(self, command, data=None):
+    def _command(self, command, data=None):
         """Send command via socket.
 
         First 2 bytes is message size.
@@ -51,22 +62,14 @@ class Node(object):
             info += data
         self.connection.send(struct.pack('!h', len(info)) + info)
 
-    def reader(self):
-        """Read data from connection."""
-        while not self.exit:
-            try:
-                self.messages.put(self.recv_sized())
-            except (struct.error, OSError):
-                return
-
-    def recv_sized(self):
+    def _recv_sized(self):
         """Read sized message in socket."""
         size = struct.unpack('!h', self.connection.recv(2))[0]
         res = self.connection.recv(size)
         self.logger.debug('recv_sized', extra={'data': res})
         return res
 
-    def read(self, category, timeout=None):
+    def _read(self, category, timeout=None):
         """Read data from messages queue."""
         start = datetime.now()
         self.logger.debug('reading', extra={
@@ -74,28 +77,27 @@ class Node(object):
         while True:
             command = self.messages.get(timeout=timeout)
             current = datetime.now()
-            method, _category, data = command.split(b' ', 2)
+            _method, _category, data = command.split(b' ', 2)
             if category.lower().encode() == _category.lower():
                 self.logger.debug('read', extra={
                     'category': category, 'data': data})
                 return command
-            else:
-                self.messages.put(command)
 
+            self.messages.put(command)
             if timeout and (current - start).total_seconds() > timeout:
                 raise TimeoutError()
 
     def synchronize(self):
         """Syncronize worker and master."""
-        self.command('get_server_info')
-        data = self.read('server_info', 1)
+        self._command('get_server_info')
+        data = self._read('server_info', 1)
         info = json.loads(data.split(b' ', 2)[2].decode())
         self.logger.debug('worker_info', extra={'info': info})
         self.id = info['id']
         self.server.workers[self.id] = self
         self.dispatcher.add_node_actors(info['actors'], self.id)
 
-    def send_worker_info(self):
+    def _send_worker_info(self):
         actors = self.dispatcher.actors
         info = {
             'id': self.dispatcher.id,
@@ -108,35 +110,40 @@ class Node(object):
                 for name, ids in actors.items()
             }
         }
-        self.command('post_server_info', json.dumps(info).encode())
+        self._command('post_server_info', json.dumps(info).encode())
 
-    def send_job_result(self, info, res):
+    def _send_job_result(self, info, res):
         info['response'] = res
-        self.command('post_job_result', json.dumps(info).encode())
+        self._command('post_job_result', json.dumps(info).encode())
 
     def get_job(self, info, timeout=None):
-        self.command('get_job', json.dumps(info).encode())
-        res = self.read('job_result', timeout)
+        """Get job result from actor."""
+        self._command('get_job', json.dumps(info).encode())
+        res = self._read('job_result', timeout)
         return json.loads(res.split(b' ', 2)[2].decode())
 
     def post_job(self, info):
-        self.command('post_job', json.dumps(info).encode())
+        """Post job.
+
+        Post job to be executed in another node.
+        """
+        self._command('post_job', json.dumps(info).encode())
 
     def listener(self):
         """Listen to tcp requests."""
         while not self.exit:
             try:
-                command = self.recv_sized()
+                command = self._recv_sized()
                 self.logger.debug('command_received', extra={
                     'command': command})
                 _type, category, data = command.split(b' ', 2)
                 if _type == b'GET':
                     self.executor.submit(
-                        self.get_command, category, data, command)
+                        self._get_command, category, data, command)
 
                 elif _type == b'POST':
                     self.executor.submit(
-                        self.post_command, category, data, command)
+                        self._post_command, category, data, command)
 
             except KeyboardInterrupt:
                 self.connection.close()
@@ -144,17 +151,20 @@ class Node(object):
             except (struct.error, OSError):
                 return
 
-    def get_command(self, category, data, command):
-        """Get command."""
+    def _get_command(self, category, data, _command):
+        """Get command.
+
+        Handles requested get command.
+        """
         if category == b'WORKER_INFO':
-            self.send_worker_info()
+            self._send_worker_info()
 
         elif category == b'JOB':
             info = json.loads(data.decode())
             res = self.dispatcher.result(info)
-            self.send_job_result(info, res)
+            self._send_job_result(info, res)
 
-    def post_command(self, category, data, command):
+    def _post_command(self, category, data, command):
         """Post command."""
         if category == b'JOB':
             info = json.loads(data.decode())
@@ -167,21 +177,24 @@ class Node(object):
             self.messages.put(command)
 
     def join(self):
-        """Join to worker thread."""
+        """Join to worker thread.
+
+        This method is usefull for attaching main thread to Node.
+        """
         self.worker_t.result()
 
 
-class WorkerNode(Node):
+class WorkerNode(NodeBase):
     """Worker node representation, to be use in master nodes."""
 
     def target(self):
-        # self.reader()
+        """Listen to commands."""
         self.listener()
 
 
-
-class MasterNode(Node):
+class MasterNode(NodeBase):
     """Master node representation, to be use in worker nodes."""
 
     def target(self):
+        """Listen to commands."""
         self.listener()

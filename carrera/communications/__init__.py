@@ -2,8 +2,8 @@
 import socket
 import threading
 
-from carrera.workers import WorkerNode
-from carrera.workers import MasterNode
+from carrera.communications.workers import WorkerNode
+from carrera.communications.workers import MasterNode
 
 
 class TCPServer(object):
