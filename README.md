@@ -7,6 +7,11 @@
 
 Concurrency Framework
 
+# Diagram
+
+![Diagram](./carrera.png)
+
+
 # Development
 
 Install package
