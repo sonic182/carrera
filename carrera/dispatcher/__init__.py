@@ -116,6 +116,14 @@ class Dispatcher(object):
                            message=message, sender_id=sender_id)
         return msgid
 
+    def post_job_to_node(self, node, message):
+        """Post job to actor in another node."""
+        self.server.workers[node].post_job(message)
+
+    def get_result_from_node(self, node, message, timeout):
+        return self.server.workers[node].get_job(
+            message.to_dict(), timeout=timeout)
+
     def setup_server(self, host, port):
         """Setup tcp server.
 
