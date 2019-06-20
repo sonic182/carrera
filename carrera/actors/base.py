@@ -45,7 +45,7 @@ class Actor():
         actors.
         """
 
-    def setup(self, *args, **kwargs):
+    def setup(self):
         """Setup method.
 
         Util for define configurations and associate objects to the actor at
@@ -65,7 +65,8 @@ class Actor():
             instance
           * sender_id(str): if provided specify message sender to target agent
         """
-        return self._dispatcher.dispatch(msg, self.name, target_id, sender_id)
+        return self._dispatcher.dispatch(
+            msg, self.name, target_id or self.id, sender_id)
 
     def result(self, *args, **kwargs):
         """Result method.

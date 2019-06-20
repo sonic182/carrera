@@ -26,7 +26,9 @@ class ThreadActor(Actor):
             if not self.queue.empty():
                 self.msg = self.queue.get()
                 res = self.on_message(self.msg['message'])
-                self._dispatcher.response(res, **self.msg)
+                if not self.msg['broadcast']:
+                    self.response_q.put((res, self.msg['msgid']))
+                self.queue.task_done()
             sleep(0.02)
 
     def cleanup(self, force=False):
@@ -55,7 +57,9 @@ class ThreadActor(Actor):
             response, msgid = self.response_q.get(timeout=timeout)
             if msgid != message.id:
                 self.response_q.put((response, msgid))
+                self.response_q.task_done()
             else:
                 if exit:
                     self.exit = True
+                self.response_q.task_done()
                 return response

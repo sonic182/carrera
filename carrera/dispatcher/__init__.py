@@ -79,10 +79,10 @@ class Dispatcher(object):
             del self.actors[actor.name][actor.id]
 
     def dispatch(self, message_data, target_name, target_id=None,
-                 sender_id=None, msgid=None):
-        """Dispatch message."""
+                  sender_id=None, msgid=None, broadcast=False):
+        """Dispatch message to dispatcher unit."""
         message = Message(self, message_data, target_id, target_name,
-                          sender_id, msgid=msgid)
+                          sender_id, msgid=msgid, broadcast=broadcast)
         self.unit.dispatch(message)
         self.logger.debug('dispatched_message', extra=message.to_dict())
         return message
@@ -91,6 +91,10 @@ class Dispatcher(object):
         """Send task to actor."""
         self.logger.debug('sending_message', extra={'msg': msg, **kwargs})
         return self.dispatch(msg, actor, **kwargs)
+
+    def broadcast(self, actor_name, msg, **kwargs):
+        """Broadcast an message to all actors of name actor_name."""
+        return self.dispatch(msg, actor_name, broadcast=True, **kwargs)
 
     @staticmethod
     def uuid():
@@ -105,15 +109,15 @@ class Dispatcher(object):
         return self.unit.result(message, timeout)
 
     def response(self, response, msgid, message, target_name, target_id=None,
-                 sender_id=None):
+                 sender_id=None, **kwargs):
         """Dispatch actor's response to actor's requester."""
         self.logger.debug('got_response', extra={
             'response': response, 'msgid': msgid, 'message': message,
             'target_name': target_name, 'target_id': target_id,
-            'sender_id': sender_id
+            'sender_id': sender_id, 'broadcast': kwargs.get('broadcast')
         })
         self.unit.response(response, msgid, target_name, target_id,
-                           message=message, sender_id=sender_id)
+                           message=message, sender_id=sender_id, **kwargs)
         return msgid
 
     def post_job_to_node(self, node, message):

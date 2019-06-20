@@ -40,6 +40,7 @@ class DispatcherUnit(object):
     def dispatcher_unit(self):
         """Unit of messages dispatching."""
         queue = self.dispatch_q
+
         while not (self.exit and queue.empty()):
             if not queue.empty():
                 msg = queue.get()
@@ -52,7 +53,11 @@ class DispatcherUnit(object):
                                 sleep(0.02)
                             queue.put(msg)
                         continue
-                    self.dispatch_to_actor(msg)
+                    if msg.broadcast:
+                        self.broadcast_to_actors(msg)
+                    else:
+                        self.dispatch_to_actor(msg)
+                    queue.task_done()
                 except Exception:
                     self.logger.exception('dispatch_exception')
             sleep(0.02)
@@ -101,20 +106,36 @@ class DispatcherUnit(object):
         self.logger.debug('actor_selected', extra={'target_id': actor.id})
         return actor.receive(message.to_dict())
 
+    def broadcast_to_actors(self, message: Message):
+        """Broadcast message to actors."""
+        self.logger.debug('select_actor', extra=self.actors)
+        actors = self.actors[message.target_name]
+
+        for _id, actor_data in actors.items():
+            actor = actor_data['actor']
+            message2 = message.copy()
+            message2.set_target(actor)
+            self.logger.debug('actor_selected', extra={'target_id': actor.id})
+            actor.receive(message2.to_dict())
+
     def select_actor(self, target_name, target_id):
+        """Select actor."""
         if target_id:
             return self.actors[target_name][target_id]
         select_method = self.config.get('selection', 'random')
 
         if select_method == 'random':
             key = random.choice(list(self.actors[target_name]))
+
         elif select_method == 'round_robin':
             cache_key = target_name + '_generator'
             self.cache[cache_key] = self.cache.get(
                 cache_key) or self.round_robin(target_name)
             key = next(self.cache[cache_key])
+
         else:
             raise NotImplementedError('selection not implemented')
+
         return self.actors[target_name][key]
 
     def round_robin(self, target_name):
