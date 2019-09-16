@@ -1,5 +1,6 @@
 """Dispatcher."""
 from uuid import uuid4
+from threading import Lock
 from configparser import ConfigParser
 from carrera.dispatcher.dispatcher_unit import DispatcherUnit
 from carrera.message import Message
@@ -19,12 +20,29 @@ class Dispatcher(object):
         return cls.instance
 
     def __init__(self, _id=None):
+        """Initialize.
+
+        actors example:
+        {
+            'hello': {
+                'id1': {
+                    'node': 'idnode',
+                    'actor': ActorInstance
+                },
+                'id2': {
+                    'node': 'idnode',
+                    'actor': ActorInstance
+                }
+            }
+        }
+        """
         # singleton initialized flag...
         if self.initialized:
             return
         self.initialized = True
         self.logger = None
         self.config = None
+        self.dlock = Lock()  # dispatcher lock
 
         self.actors = {}
         self.id = _id or self.uuid()
@@ -128,6 +146,27 @@ class Dispatcher(object):
         return self.server.workers[node].get_job(
             message.to_dict(), timeout=timeout)
 
+    def remove_node(self, node):
+        """Remove node actors from memmory."""
+        with self.dlock:
+            actornames_to_rm = []
+            for actorname, ids in self.actors.items():
+                node_to_rm = []
+
+                for actorid, actor in ids.items():
+                    if actor['node'] == node:
+                        node_to_rm.append(actorid)
+
+                for actorid in node_to_rm:
+                    del ids[actorid]
+
+                if not self.actors[actorname]:
+                    actornames_to_rm.append(actorname)
+            for actorname in actornames_to_rm:
+                del self.actors[actorname]
+            self.logger.debug(
+                'actors_removed', extra={'node': node, 'actors': self.actors})
+
     def setup_server(self, host, port):
         """Setup tcp server.
 
@@ -152,4 +191,5 @@ class Dispatcher(object):
 
     def join(self):
         """Join client to master."""
-        getattr(self, 'client', self.server).join()
+        worker = getattr(self, 'client') or self.server
+        worker.join()

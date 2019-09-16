@@ -41,13 +41,12 @@ def test_master_node_bidirectional():
     parent_conn, child_conn = mp.Pipe()
     result_conn, result_child_conn = mp.Pipe()
     barrier = mp.Barrier(2)
-    process_master = mp.Process(
-        target=master, args=(port, barrier, parent_conn))
-    process_node = mp.Process(
+    p1 = mp.Process(target=master, args=(port, barrier, parent_conn))
+    p2 = mp.Process(
         target=node, args=(port, barrier, child_conn, result_child_conn))
-    process_master.start()
-    process_node.start()
+    p1.start()
+    p2.start()
     assert result_conn.poll(2)
     assert result_conn.recv() == 'Hello world'
-    process_master.terminate()
-    process_node.terminate()
+    p1.terminate()
+    p2.terminate()

@@ -29,7 +29,10 @@ class NodeBase:
     """
 
     def __init__(self, server, connection, address):
-        """Initalize Node."""
+        """Initalize Node.
+
+        id represents the remote dispatcher.
+        """
         self.id = None
         self.connection = connection
         self.address = address
@@ -39,12 +42,16 @@ class NodeBase:
         self.messages = Queue()
         self.exit = False
         self.executor = ThreadPoolExecutor()
-        # self.worker_t = Thread(target=self.target)
         self.worker_t = self.executor.submit(self.target)
 
     def cleanup(self):
         """Cleanup."""
         self.messages.task_done()
+        try:
+            self.dispatcher.remove_node(self.id)
+        except Exception:
+            self.logger.exception('remove_node_exception')
+            raise
         self.exit = True
 
     def target(self):
@@ -149,6 +156,7 @@ class NodeBase:
                 self.connection.close()
 
             except (struct.error, OSError):
+                self.cleanup()
                 return
 
     def _get_command(self, category, data, _command):
@@ -181,7 +189,7 @@ class NodeBase:
 
         This method is usefull for attaching main thread to Node.
         """
-        self.worker_t.result()
+        self.worker_t.join()
 
 
 class WorkerNode(NodeBase):
