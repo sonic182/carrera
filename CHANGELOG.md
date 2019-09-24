@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Queue of messages when sending work to actors
 - Multi master
 - Read the docs
+- Broadcast message
+- Messages expiration
+
 
 [Unreleased]: https://github.com/sonic182/carrera/compare/0.0.2..HEAD
 [0.0.2]: https://github.com/sonic182/carrera/compare/0.0.2..0.0.1
