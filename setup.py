@@ -20,7 +20,7 @@ def requirements(filename):
 
 setup(
     name='carrera',
-    version='0.0.1',
+    version=read_file('VERSION'),
     description='Concurrency Framework',
     author='Johanderson Mogollon',
     author_email='johanderson@mogollon.com.ve',
