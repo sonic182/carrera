@@ -20,7 +20,7 @@ test:
 	docker run -it --rm -v $(shell pwd):/app python:3.7 bash -l -c "cd /root && cp -r /app/* . && pip install -r requirements.txt && pip install -e \".[test]\" && pytest"
 
 clear:
-	-rm -r $(shell find . -name __pycache__) build dist .mypy_cache aiosonic.egg-info .eggs
+	-rm -r $(shell find . -name __pycache__) build dist .mypy_cache *.egg-info .eggs
 
 build: clear
 	python setup.py sdist bdist_wheel
