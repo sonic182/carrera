@@ -9,6 +9,10 @@
 
 Concurrency Framework
 
+# TODO
+
+* Error handling layer for actors
+
 # Diagram
 
 ![Diagram](./carrera.png)
